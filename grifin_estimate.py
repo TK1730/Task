@@ -23,13 +23,13 @@ voiced_wav_path = '/nonpara30w/wav24kHz16bit/'
 voiced_npy_path = '/nonpara30w/npy/'
 
 
-
+# 音声ファイルをlogスケール変換または逆変換
 def dynamic_range_compression(x, C=1, clip_val=1e-5):
     return np.log(x.clip(clip_val,None))
 
 def dynamic_range_decompression(x, C=1):
     return np.exp(x)
-
+# メル周波数、メルフィルター
 mel_freqs = librosa.mel_frequencies(n_mels=config.n_mels, fmin=config.fmin, fmax=config.fmax, htk=False).reshape(1,-1)
 mel_filter = librosa.filters.mel(sr=config.sr, n_fft = config.n_fft, fmin= config.fmin, fmax= config.fmax, n_mels = config.n_mels, htk = False, norm='slaney').T
 
@@ -38,15 +38,16 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
 
 # ネットワーク読み込み
+# 基本周波数
 net_f0 = LSTM_net(input_size=80,output_size=1).to(device)
 net_f0.load_state_dict(torch.load('model/msp_2_f0_4_bestloss.pth'))
 net_f0.eval()
 
-
+# メルスペクトログラム
 net_msp = LSTM_net(input_size=81,output_size=80).to(device)
 net_msp.load_state_dict(torch.load('model/mspmsp_f0_2_msp_1_bestloss.pth'))
-
 net_msp.eval()
+
 with torch.inference_mode():
     for person in os.listdir(dataset_path):
         if os.path.isdir(dataset_path+person):
@@ -99,6 +100,7 @@ with torch.inference_mode():
                     # ax.set_ylabel("Frequency [Hz]")
                     # plt.tight_layout()
                     # plt.show()
+                    
                     #音声出力
                     wav = librosa.feature.inverse.mel_to_audio(msp.T, sr=config.sr, n_fft=config.n_fft,n_iter=1000, hop_length=config.hop_length,power=1,pad_mode='reflect', win_length=config.win_length)
                     sf.write(save_path,wav,sr)
